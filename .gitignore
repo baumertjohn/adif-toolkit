@@ -205,3 +205,8 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Added by JB - 20250708
+node_modules/ *.json # Exclude temporary JSON outputs (e.g., output.json) *.log
+.vscode/ .idea/ *.swp
+.DS_Store Thumbs.db
