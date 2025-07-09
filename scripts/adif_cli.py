@@ -1,6 +1,6 @@
 import sys
 import json
-from adif_to_json import convert_adif_file
+from adiflib import convert_adif_file
 
 
 def main():
