@@ -1,2 +1,166 @@
-<!-- Placeholder -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QSO Grid Viewer</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      .table-container {
+        max-width: 100%;
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: 600px;
+        border: 1px solid #ccc;
+      }
+      table {
+        border-collapse: collapse;
+        width: max-content;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+        white-space: nowrap;
+      }
+      th {
+        background-color: #f2f2f2;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+      tr:hover {
+        background-color: #f5f5f5;
+      }
+      input[type="file"] {
+        margin-bottom: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>QSO Grid Viewer</h1>
+    <input type="file" id="jsonFileInput" accept=".json" />
+    <div class="table-container">
+      <table id="qsoTable">
+        <thead>
+          <tr id="headerRow"></tr>
+        </thead>
+        <tbody id="dataBody"></tbody>
+      </table>
+    </div>
 
+    <script>
+      const jsonFileInput = document.getElementById("jsonFileInput");
+      const qsoTable = document.getElementById("qsoTable");
+      const headerRow = document.getElementById("headerRow");
+      const dataBody = document.getElementById("dataBody");
+
+      // Define preferred column order for common ADIF fields
+      const PREFERRED_COLUMNS = [
+        "CALL",
+        "QSO_DATE",
+        "TIME_ON",
+        "BAND",
+        "MODE",
+        "FREQ",
+        "RST_SENT",
+        "RST_RCVD",
+        "NAME",
+        "QTH",
+        "COUNTRY",
+        "GRIDSQUARE",
+      ];
+
+      jsonFileInput.addEventListener("change", (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const qsos = JSON.parse(e.target.result);
+            if (!Array.isArray(qsos) || qsos.length === 0) {
+              alert("No valid QSO data found in the file.");
+              return;
+            }
+
+            // Get all unique fields
+            const allFields = [...new Set(qsos.flatMap((qso) => Object.keys(qso)))];
+
+            // Order columns: preferred fields first, then others alphabetically
+            const columns = [
+              ...PREFERRED_COLUMNS.filter((col) => allFields.includes(col)),
+              ...allFields.filter((col) => !PREFERRED_COLUMNS.includes(col)).sort(),
+            ];
+
+            // Clear existing table
+            headerRow.innerHTML = "";
+            dataBody.innerHTML = "";
+
+            // Create headers
+            columns.forEach((col) => {
+              const th = document.createElement("th");
+              th.textContent = col;
+              headerRow.appendChild(th);
+            });
+
+            // Populate data rows
+            qsos.forEach((qso) => {
+              const tr = document.createElement("tr");
+              columns.forEach((col) => {
+                const td = document.createElement("td");
+                td.textContent = qso[col] || "";
+                tr.appendChild(td);
+              });
+              dataBody.appendChild(tr);
+            });
+
+            // Autosize columns based on content
+            autosizeColumns();
+          } catch (err) {
+            alert("Error parsing JSON file: " + err.message);
+          }
+        };
+        reader.readAsText(file);
+      });
+
+      function autosizeColumns() {
+        const table = document.getElementById("qsoTable");
+        const headers = table.querySelectorAll("th");
+        const rows = table.querySelectorAll("tbody tr");
+
+        headers.forEach((header, colIndex) => {
+          // Measure header width
+          const headerText = header.textContent;
+          const headerWidth = getTextWidth(headerText);
+
+          // Measure max width of data in this column
+          let maxDataWidth = headerWidth;
+          rows.forEach((row) => {
+            const cell = row.cells[colIndex];
+            const cellWidth = getTextWidth(cell.textContent);
+            maxDataWidth = Math.max(maxDataWidth, cellWidth);
+          });
+
+          // Set column width (add padding)
+          header.style.width = `${maxDataWidth + 20}px`;
+          header.style.minWidth = `${maxDataWidth + 20}px`;
+        });
+      }
+
+      function getTextWidth(text) {
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        context.font = "16px Arial"; // Match table font
+        return context.measureText(text).width;
+      }
+    </script>
+  </body>
+</html>
